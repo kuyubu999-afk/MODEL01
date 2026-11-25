@@ -142,11 +142,15 @@ class MainActivity:Activity(){
         Thread {
             try {
                 val encoded=URLEncoder.encode(query,"UTF-8").replace("+","%20")
-                val sdf=downloadText("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/$encoded/record/SDF?record_type=3d")
+                val (sdf,dimension)=try {
+                    downloadText("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/$encoded/record/SDF?record_type=3d") to "3D"
+                } catch (_:Exception) {
+                    downloadText("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/$encoded/record/SDF?record_type=2d") to "2D平面结构"
+                }
                 val molecule=parseSdf(sdf,query)
                 runOnUiThread {
                     viewer.molecule=molecule
-                    info.text="数据库结构已载入：${molecule.name} · PubChem 3D"
+                    info.text="已载入 PubChem 结构：${molecule.name} · $dimension"
                     viewer.reset();viewer.invalidate()
                 }
             } catch (_:Exception) {
