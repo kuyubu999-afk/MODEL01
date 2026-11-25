@@ -20,7 +20,7 @@ class MainActivity:Activity(){
         Molecule("甲烷","CH₄",listOf(Atom("C",0f,0f,0f),Atom("H",0.8f,0.8f,0.8f),Atom("H",-0.8f,-0.8f,0.8f),Atom("H",-0.8f,0.8f,-0.8f),Atom("H",0.8f,-0.8f,-0.8f)),listOf(Bond(0,1),Bond(0,2),Bond(0,3),Bond(0,4))),
         Molecule("二氧化碳","CO₂",listOf(Atom("O",-1.2f,0f,0f),Atom("C",0f,0f,0f),Atom("O",1.2f,0f,0f)),listOf(Bond(0,1),Bond(1,2))),
         Molecule("氨","NH₃",listOf(Atom("N",0f,0f,0f),Atom("H",0.9f,0.2f,0.3f),Atom("H",-0.45f,0.8f,0.3f),Atom("H",-0.45f,-0.7f,0.3f)),listOf(Bond(0,1),Bond(0,2),Bond(0,3))),
-        Molecule("苯","C₆H₆",(0..11).map{i->val r=if(i<6)1f else 1.65f;val a=2*PI*(i%6)/6;Atom(if(i<6)"C" else "H",(r*cos(a)).toFloat(),(r*sin(a)).toFloat(),0f)},(0..5).map{Bond(it,(it+1)%6}+(0..5).map{Bond(it,it+6)}),
+        Molecule("苯","C₆H₆",(0..11).map{i->val r=if(i<6)1f else 1.65f;val a=2*PI*(i%6)/6;Atom(if(i<6)"C" else "H",(r*cos(a)).toFloat(),(r*sin(a)).toFloat(),0f)},(0..5).map{Bond(it,(it+1)%6)}+(0..5).map{Bond(it,it+6)}),
         Molecule("氧气","O₂",listOf(Atom("O",-0.65f,0f,0f),Atom("O",0.65f,0f,0f)),listOf(Bond(0,1))),
         Molecule("氮气","N₂",listOf(Atom("N",-0.65f,0f,0f),Atom("N",0.65f,0f,0f)),listOf(Bond(0,1))),
         Molecule("乙醇","C₂H₆O",listOf(Atom("C",-0.7f,0f,0f),Atom("C",0.5f,0.2f,0f),Atom("O",1.5f,-0.3f,0f),Atom("H",-1.1f,0.9f,0.5f),Atom("H",-1.1f,-0.8f,-0.5f),Atom("H",-0.9f,-0.5f,0.9f),Atom("H",0.4f,1.2f,0.5f),Atom("H",0.4f,-0.8f,-0.5f),Atom("H",2.1f,0.1f,0.2f)),listOf(Bond(0,1),Bond(1,2),Bond(0,3),Bond(0,4),Bond(0,5),Bond(1,6),Bond(1,7),Bond(2,8))),
