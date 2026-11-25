@@ -6,6 +6,9 @@ import android.graphics.*
 import android.view.*
 import android.widget.*
 import kotlin.math.*
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
 
 data class Atom(val element:String,val x:Float,val y:Float,val z:Float)
 data class Bond(val a:Int,val b:Int)
@@ -60,13 +63,13 @@ class MainActivity:Activity(){
             textSize=15f;setSingleLine(true);imeOptions=android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
             setPadding(12,0,12,0);background=rounded(panel)
         }
-        inputRow.addView(input,LinearLayout.LayoutParams(0,52,1f))
+        inputRow.addView(input,LinearLayout.LayoutParams(0,69,1f))
         val search=Button(this).apply{
             text="生成模型";textSize=14f;setTextColor(Color.WHITE)
             background=rounded(accent);isAllCaps=false
             setOnClickListener{loadInput()}
         }
-        inputRow.addView(search,LinearLayout.LayoutParams(112,52).apply{leftMargin=8})
+        inputRow.addView(search,LinearLayout.LayoutParams(112,69).apply{leftMargin=8})
         root.addView(inputRow,LinearLayout.LayoutParams(-1,-2))
 
         val sampleLabel=TextView(this).apply{
@@ -131,15 +134,66 @@ class MainActivity:Activity(){
 
     private fun loadInput(){
         val query=input.text.toString().trim()
-        if(query.isEmpty()){info.text="请先输入化合物名称或分子式";return}
+        if(query.isEmpty()){info.text="请输入化合物中文名、英文名或分子式";return}
         val normalized=query.replace("₂","2").replace("₃","3").replace("₄","4").replace("₅","5").replace("₆","6").replace("₇","7").replace("₈","8").replace("₉","9").replace("₀","0").replace(" ","")
         val found=samples.firstOrNull{it.name.equals(query,true)||it.formula.replace("₂","2").replace("₃","3").replace("₄","4").replace("₆","6").equals(normalized,true)}
-        if(found!=null){viewer.molecule=found;info.text="已载入：${found.name}（内置结构）";viewer.reset();viewer.invalidate();return}
-        val parsed=parseFormula(normalized)
-        if(parsed==null){info.text="暂未识别。可输入：水、甲烷、二氧化碳、氨、苯、氧气、氮气、乙醇、过氧化氢、二氧化硫，或有效分子式。";return}
-        viewer.molecule=makeSchematic(normalized,parsed)
-        info.text="分子式示意：原子数量正确，但键连接和空间构型未经化学结构库验证。"
-        viewer.reset();viewer.invalidate()
+        if(found!=null){viewer.molecule=found;info.text="已载入：${found.name}（内置模型）";viewer.reset();viewer.invalidate();return}
+        info.text="正在查询 PubChem 化合物数据库…"
+        Thread {
+            try {
+                val encoded=URLEncoder.encode(query,"UTF-8").replace("+","%20")
+                val sdf=downloadText("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/$encoded/record/SDF?record_type=3d")
+                val molecule=parseSdf(sdf,query)
+                runOnUiThread {
+                    viewer.molecule=molecule
+                    info.text="数据库结构已载入：${molecule.name} · PubChem 3D"
+                    viewer.reset();viewer.invalidate()
+                }
+            } catch (_:Exception) {
+                runOnUiThread {
+                    info.text="数据库未返回可用的3D结构。可换英文名/分子式；不会用虚构排列冒充真实结构。"
+                }
+            }
+        }.start()
+    }
+
+    private fun downloadText(address:String):String {
+        val connection=URL(address).openConnection() as HttpURLConnection
+        connection.connectTimeout=12000
+        connection.readTimeout=20000
+        connection.requestMethod="GET"
+        connection.setRequestProperty("User-Agent","MODEL01-Android/1.1")
+        try {
+            if(connection.responseCode !in 200..299) throw IllegalStateException("HTTP ${connection.responseCode}")
+            return connection.inputStream.bufferedReader(Charsets.UTF_8).use{it.readText()}
+        } finally { connection.disconnect() }
+    }
+
+    private fun parseSdf(sdf:String,fallbackName:String):Molecule {
+        val lines=sdf.lineSequence().toList()
+        if(lines.size<5) throw IllegalArgumentException("Invalid SDF")
+        val counts=lines[3].trim().split(Regex("\\s+"))
+        if(counts.size<2) throw IllegalArgumentException("Missing atom/bond counts")
+        val atomCount=counts[0].toInt()
+        val bondCount=counts[1].toInt()
+        if(atomCount !in 1..250 || bondCount !in 0..500) throw IllegalArgumentException("Molecule too large")
+        if(lines.size<4+atomCount+bondCount) throw IllegalArgumentException("Truncated SDF")
+        val atoms=mutableListOf<Atom>()
+        for(i in 0 until atomCount) {
+            val parts=lines[4+i].trim().split(Regex("\\s+"))
+            if(parts.size<4) throw IllegalArgumentException("Bad atom record")
+            atoms.add(Atom(parts[3],parts[0].toFloat(),parts[1].toFloat(),parts[2].toFloat()))
+        }
+        val bonds=mutableListOf<Bond>()
+        for(i in 0 until bondCount) {
+            val parts=lines[4+atomCount+i].trim().split(Regex("\\s+"))
+            if(parts.size<3) throw IllegalArgumentException("Bad bond record")
+            val a=parts[0].toInt()-1;val b=parts[1].toInt()-1
+            if(a !in atoms.indices || b !in atoms.indices) throw IllegalArgumentException("Bad bond index")
+            bonds.add(Bond(a,b))
+        }
+        val name=lines[0].trim().ifEmpty{fallbackName}
+        return Molecule(name,fallbackName,atoms,bonds)
     }
 
     private fun parseFormula(formula:String):List<String>?{
