@@ -30,33 +30,100 @@ class MainActivity:Activity(){
 
     override fun onCreate(savedInstanceState:Bundle?){
         super.onCreate(savedInstanceState)
-        window.statusBarColor=Color.rgb(13,22,39)
-        val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setBackgroundColor(Color.rgb(13,22,39));setPadding(12,8,12,8)}
-        val title=TextView(this).apply{text="MODEL01 · 三维分子模型";textSize=21f;setTextColor(Color.WHITE);gravity=Gravity.CENTER;setPadding(0,8,0,8)}
-        root.addView(title)
-        input=EditText(this).apply{hint="输入化合物名称或分子式，如：水、乙醇、C6H6";setHintTextColor(Color.LTGRAY);setTextColor(Color.WHITE);textSize=16f;setSingleLine(true);setPadding(12,4,12,4)}
-        root.addView(input,LinearLayout.LayoutParams(-1,52))
-        val search=Button(this).apply{text="生成 / 查询分子模型";setOnClickListener{loadInput()}}
-        root.addView(search,LinearLayout.LayoutParams(-1,48))
-        val sampleLabel=TextView(this).apply{text="或选择示例分子";textSize=13f;setTextColor(Color.LTGRAY);setPadding(2,8,0,0)}
+        val bg=Color.rgb(13,22,39)
+        val panel=Color.rgb(25,38,59)
+        val accent=Color.rgb(54,125,220)
+        window.statusBarColor=bg
+        window.navigationBarColor=bg
+
+        fun rounded(color:Int)=android.graphics.drawable.GradientDrawable().apply{
+            setColor(color);cornerRadius=12f
+        }
+        val root=LinearLayout(this).apply{
+            orientation=LinearLayout.VERTICAL
+            setBackgroundColor(bg)
+            setPadding(14,8,14,8)
+        }
+        val title=TextView(this).apply{
+            text="MODEL01 · 三维分子模型"
+            textSize=22f;setTextColor(Color.WHITE)
+            gravity=Gravity.CENTER;setPadding(0,8,0,12)
+        }
+        root.addView(title,LinearLayout.LayoutParams(-1,-2))
+
+        val inputRow=LinearLayout(this).apply{
+            orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL
+        }
+        input=EditText(this).apply{
+            hint="输入名称或分子式，如：水、乙醇、C6H6"
+            setHintTextColor(Color.LTGRAY);setTextColor(Color.WHITE)
+            textSize=15f;setSingleLine(true);imeOptions=android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+            setPadding(12,0,12,0);background=rounded(panel)
+        }
+        inputRow.addView(input,LinearLayout.LayoutParams(0,52,1f))
+        val search=Button(this).apply{
+            text="生成模型";textSize=14f;setTextColor(Color.WHITE)
+            background=rounded(accent);isAllCaps=false
+            setOnClickListener{loadInput()}
+        }
+        inputRow.addView(search,LinearLayout.LayoutParams(112,52).apply{leftMargin=8})
+        root.addView(inputRow,LinearLayout.LayoutParams(-1,-2))
+
+        val sampleLabel=TextView(this).apply{
+            text="示例分子";textSize=13f;setTextColor(Color.LTGRAY)
+            setPadding(2,10,0,4)
+        }
         root.addView(sampleLabel)
-        val spinner=Spinner(this)
-        spinner.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,samples.map{"${it.name}  ${it.formula}"})
-        root.addView(spinner)
+        val spinner=Spinner(this).apply{
+            background=rounded(panel);setPadding(8,0,8,0)
+        }
+        val names=samples.map{"${it.name}  ${it.formula}"}
+        val adapter=object: ArrayAdapter<String>(this,android.R.layout.simple_spinner_item,names){
+            override fun getView(position:Int,convertView:View?,parent:android.view.ViewGroup):View{
+                val v=super.getView(position,convertView,parent) as TextView
+                v.setTextColor(Color.WHITE);v.textSize=15f;v.setPadding(10,8,8,8);return v
+            }
+            override fun getDropDownView(position:Int,convertView:View?,parent:android.view.ViewGroup):View{
+                val v=super.getDropDownView(position,convertView,parent) as TextView
+                v.setTextColor(Color.WHITE);v.setBackgroundColor(panel);v.setPadding(16,14,8,14);return v
+            }
+        }
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinner.adapter=adapter
+        root.addView(spinner,LinearLayout.LayoutParams(-1,48))
+
         viewer=MoleculeView(this,samples[0])
         root.addView(viewer,LinearLayout.LayoutParams(-1,0,1f))
-        info=TextView(this).apply{text="拖动旋转 · 双指缩放";textSize=12f;setTextColor(Color.LTGRAY);gravity=Gravity.CENTER;setPadding(0,2,0,6)}
-        root.addView(info)
-        val row=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER}
-        fun button(label:String,action:()->Unit){row.addView(Button(this).apply{text=label;setTextSize(11f);setOnClickListener{action()}},LinearLayout.LayoutParams(0,48,1f))}
+        info=TextView(this).apply{
+            text="已载入水分子 · 拖动旋转，双指缩放"
+            textSize=12f;setTextColor(Color.LTGRAY)
+            gravity=Gravity.CENTER;setPadding(0,4,0,8)
+        }
+        root.addView(info,LinearLayout.LayoutParams(-1,-2))
+
+        val row=LinearLayout(this).apply{
+            orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER
+        }
+        fun button(label:String,action:()->Unit){
+            val b=Button(this).apply{
+                text=label;setTextSize(11f);setTextColor(Color.WHITE)
+                isAllCaps=false;background=rounded(panel);setOnClickListener{action()}
+            }
+            row.addView(b,LinearLayout.LayoutParams(0,46,1f).apply{setMargins(2,0,2,0)})
+        }
         button("标注 / 净图"){viewer.labels=!viewer.labels;viewer.invalidate()}
         button("球棍"){viewer.style=0;viewer.invalidate()}
         button("空间填充"){viewer.style=1;viewer.invalidate()}
         button("复位"){viewer.reset();viewer.invalidate()}
-        root.addView(row)
+        root.addView(row,LinearLayout.LayoutParams(-1,48))
+
         spinner.onItemSelectedListener=object:AdapterView.OnItemSelectedListener{
             override fun onNothingSelected(p:AdapterView<*>?){}
-            override fun onItemSelected(p:AdapterView<*>?,v:View?,pos:Int,id:Long){viewer.molecule=samples[pos];input.setText(samples[pos].name);info.text="已载入示例 · 拖动旋转，双指缩放";viewer.reset();viewer.invalidate()}
+            override fun onItemSelected(p:AdapterView<*>?,v:View?,pos:Int,id:Long){
+                viewer.molecule=samples[pos];input.setText(samples[pos].name)
+                info.text="已载入示例：${samples[pos].name}"
+                viewer.reset();viewer.invalidate()
+            }
         }
         input.setOnEditorActionListener{_,_,_->loadInput();true}
         setContentView(root)
