@@ -13,28 +13,42 @@ data class Molecule(val name:String,val formula:String,val atoms:List<Atom>,val 
 
 class MainActivity:Activity(){
     private lateinit var viewer:MoleculeView
+    private lateinit var input:EditText
+    private lateinit var info:TextView
     private val samples=listOf(
         Molecule("水","H₂O",listOf(Atom("O",0f,0f,0f),Atom("H",-0.8f,0.55f,0f),Atom("H",0.8f,0.55f,0f)),listOf(Bond(0,1),Bond(0,2))),
         Molecule("甲烷","CH₄",listOf(Atom("C",0f,0f,0f),Atom("H",0.8f,0.8f,0.8f),Atom("H",-0.8f,-0.8f,0.8f),Atom("H",-0.8f,0.8f,-0.8f),Atom("H",0.8f,-0.8f,-0.8f)),listOf(Bond(0,1),Bond(0,2),Bond(0,3),Bond(0,4))),
         Molecule("二氧化碳","CO₂",listOf(Atom("O",-1.2f,0f,0f),Atom("C",0f,0f,0f),Atom("O",1.2f,0f,0f)),listOf(Bond(0,1),Bond(1,2))),
         Molecule("氨","NH₃",listOf(Atom("N",0f,0f,0f),Atom("H",0.9f,0.2f,0.3f),Atom("H",-0.45f,0.8f,0.3f),Atom("H",-0.45f,-0.7f,0.3f)),listOf(Bond(0,1),Bond(0,2),Bond(0,3))),
-        Molecule("苯","C₆H₆", (0..11).map{ i-> val r=if(i<6) 1f else 1.65f; val a=2*PI*(i%6)/6; Atom(if(i<6)"C" else "H",(r*cos(a)).toFloat(),(r*sin(a)).toFloat(),0f) }, (0..5).map{Bond(it,(it+1)%6)}+ (0..5).map{Bond(it,it+6)})
+        Molecule("苯","C₆H₆",(0..11).map{i->val r=if(i<6)1f else 1.65f;val a=2*PI*(i%6)/6;Atom(if(i<6)"C" else "H",(r*cos(a)).toFloat(),(r*sin(a)).toFloat(),0f)},(0..5).map{Bond(it,(it+1)%6}+(0..5).map{Bond(it,it+6)}),
+        Molecule("氧气","O₂",listOf(Atom("O",-0.65f,0f,0f),Atom("O",0.65f,0f,0f)),listOf(Bond(0,1))),
+        Molecule("氮气","N₂",listOf(Atom("N",-0.65f,0f,0f),Atom("N",0.65f,0f,0f)),listOf(Bond(0,1))),
+        Molecule("乙醇","C₂H₆O",listOf(Atom("C",-0.7f,0f,0f),Atom("C",0.5f,0.2f,0f),Atom("O",1.5f,-0.3f,0f),Atom("H",-1.1f,0.9f,0.5f),Atom("H",-1.1f,-0.8f,-0.5f),Atom("H",-0.9f,-0.5f,0.9f),Atom("H",0.4f,1.2f,0.5f),Atom("H",0.4f,-0.8f,-0.5f),Atom("H",2.1f,0.1f,0.2f)),listOf(Bond(0,1),Bond(1,2),Bond(0,3),Bond(0,4),Bond(0,5),Bond(1,6),Bond(1,7),Bond(2,8))),
+        Molecule("过氧化氢","H₂O₂",listOf(Atom("O",-0.65f,0f,0f),Atom("O",0.65f,0f,0.3f),Atom("H",-1.2f,0.7f,0f),Atom("H",1.2f,-0.5f,0.4f)),listOf(Bond(0,1),Bond(0,2),Bond(1,3))),
+        Molecule("二氧化硫","SO₂",listOf(Atom("S",0f,0f,0f),Atom("O",-0.9f,0.7f,0f),Atom("O",0.9f,0.7f,0f)),listOf(Bond(0,1),Bond(0,2)))
     )
-    override fun onCreate(savedInstanceState:Bundle?){super.onCreate(savedInstanceState)
+
+    override fun onCreate(savedInstanceState:Bundle?){
+        super.onCreate(savedInstanceState)
         window.statusBarColor=Color.rgb(13,22,39)
-        val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setBackgroundColor(Color.rgb(13,22,39));setPadding(14,12,14,8)}
-        val title=TextView(this).apply{text="MODEL01 · 三维分子模型";textSize=21f;setTextColor(Color.WHITE);gravity=Gravity.CENTER;setPadding(0,8,0,12)}
+        val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setBackgroundColor(Color.rgb(13,22,39));setPadding(12,8,12,8)}
+        val title=TextView(this).apply{text="MODEL01 · 三维分子模型";textSize=21f;setTextColor(Color.WHITE);gravity=Gravity.CENTER;setPadding(0,8,0,8)}
         root.addView(title)
+        input=EditText(this).apply{hint="输入化合物名称或分子式，如：水、乙醇、C6H6";setHintTextColor(Color.LTGRAY);setTextColor(Color.WHITE);textSize=16f;singleLine=true;setPadding(12,4,12,4)}
+        root.addView(input,LinearLayout.LayoutParams(-1,52))
+        val search=Button(this).apply{text="生成 / 查询分子模型";setOnClickListener{loadInput()}}
+        root.addView(search,LinearLayout.LayoutParams(-1,48))
+        val sampleLabel=TextView(this).apply{text="或选择示例分子";textSize=13f;setTextColor(Color.LTGRAY);setPadding(2,8,0,0)}
+        root.addView(sampleLabel)
         val spinner=Spinner(this)
-        val adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,samples.map{"${it.name}  ${it.formula}"})
-        spinner.adapter=adapter
+        spinner.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,samples.map{"${it.name}  ${it.formula}"})
         root.addView(spinner)
         viewer=MoleculeView(this,samples[0])
         root.addView(viewer,LinearLayout.LayoutParams(-1,0,1f))
-        val info=TextView(this).apply{text="拖动旋转 · 双指缩放";textSize=13f;setTextColor(Color.LTGRAY);gravity=Gravity.CENTER;setPadding(0,0,0,8)}
+        info=TextView(this).apply{text="拖动旋转 · 双指缩放";textSize=12f;setTextColor(Color.LTGRAY);gravity=Gravity.CENTER;setPadding(0,2,0,6)}
         root.addView(info)
         val row=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER}
-        fun button(label:String,action:()->Unit){row.addView(Button(this).apply{text=label;setOnClickListener{action()}},LinearLayout.LayoutParams(0,52,1f))}
+        fun button(label:String,action:()->Unit){row.addView(Button(this).apply{text=label;setTextSize(11f);setOnClickListener{action()}},LinearLayout.LayoutParams(0,48,1f))}
         button("标注 / 净图"){viewer.labels=!viewer.labels;viewer.invalidate()}
         button("球棍"){viewer.style=0;viewer.invalidate()}
         button("空间填充"){viewer.style=1;viewer.invalidate()}
@@ -42,18 +56,59 @@ class MainActivity:Activity(){
         root.addView(row)
         spinner.onItemSelectedListener=object:AdapterView.OnItemSelectedListener{
             override fun onNothingSelected(p:AdapterView<*>?){}
-            override fun onItemSelected(p:AdapterView<*>?,v:View?,pos:Int,id:Long){viewer.molecule=samples[pos];viewer.reset();viewer.invalidate()}
+            override fun onItemSelected(p:AdapterView<*>?,v:View?,pos:Int,id:Long){viewer.molecule=samples[pos];input.setText(samples[pos].name);info.text="已载入示例 · 拖动旋转，双指缩放";viewer.reset();viewer.invalidate()}
         }
+        input.setOnEditorActionListener{_,_,_->loadInput();true}
         setContentView(root)
     }
+
+    private fun loadInput(){
+        val query=input.text.toString().trim()
+        if(query.isEmpty()){info.text="请先输入化合物名称或分子式";return}
+        val normalized=query.replace("₂","2").replace("₃","3").replace("₄","4").replace("₅","5").replace("₆","6").replace("₇","7").replace("₈","8").replace("₉","9").replace("₀","0").replace(" ","")
+        val found=samples.firstOrNull{it.name.equals(query,true)||it.formula.replace("₂","2").replace("₃","3").replace("₄","4").replace("₆","6").equals(normalized,true)}
+        if(found!=null){viewer.molecule=found;info.text="已载入：${found.name}（内置结构）";viewer.reset();viewer.invalidate();return}
+        val parsed=parseFormula(normalized)
+        if(parsed==null){info.text="暂未识别。可输入：水、甲烷、二氧化碳、氨、苯、氧气、氮气、乙醇、过氧化氢、二氧化硫，或有效分子式。";return}
+        viewer.molecule=makeSchematic(normalized,parsed)
+        info.text="分子式示意：原子数量正确，但键连接和空间构型未经化学结构库验证。"
+        viewer.reset();viewer.invalidate()
+    }
+
+    private fun parseFormula(formula:String):List<String>?{
+        if(formula.isEmpty()||formula.length>40)return null
+        val regex=Regex("([A-Z][a-z]?)([0-9]*)")
+        val out=mutableListOf<String>();var cursor=0
+        for(m in regex.findAll(formula)){
+            if(m.range.first!=cursor)return null
+            val symbol=m.groupValues[1];val count=m.groupValues[2].ifEmpty{"1"}.toIntOrNull()?:return null
+            if(symbol !in setOf("H","C","N","O","F","P","S","Cl","Br","I","Na","K","Ca","Mg"))return null
+            if(count !in 1..30||out.size+count>100)return null
+            repeat(count){out.add(symbol)}
+            cursor=m.range.last+1
+        }
+        return if(cursor==formula.length&&out.isNotEmpty())out else null
+    }
+
+    private fun makeSchematic(formula:String,elements:List<String>):Molecule{
+        val atoms=elements.mapIndexed{i,e->
+            val angle=i*2.399963f
+            val radius=0.45f+sqrt(i.toFloat())*0.48f
+            Atom(e,cos(angle)*radius,sin(angle)*radius,((i%3)-1)*0.28f)
+        }
+        val bonds=(0 until elements.size-1).map{Bond(it,it+1)}
+        return Molecule("分子式示意",formula,atoms,bonds)
+    }
 }
+
 class MoleculeView(context:android.content.Context,var molecule:Molecule):View(context){
     var labels=true;var style=0;private var rx=-0.35f;private var ry=0.35f;private var scale=1f
     private val atomPaint=Paint(3);private val bondPaint=Paint(3).apply{color=Color.LTGRAY;strokeWidth=9f;strokeCap=Paint.Cap.ROUND}
     private val textPaint=Paint(3).apply{color=Color.WHITE;textSize=30f;textAlign=Paint.Align.CENTER;typeface=Typeface.DEFAULT_BOLD}
     private var lastX=0f;private var lastY=0f;private var oldDist=0f
     fun reset(){rx=-0.35f;ry=0.35f;scale=1f}
-    override fun onDraw(c:Canvas){super.onDraw(c);c.drawColor(Color.rgb(13,22,39))
+    override fun onDraw(c:Canvas){
+        super.onDraw(c);c.drawColor(Color.rgb(13,22,39))
         val cx=width/2f;val cy=height/2f
         val projected=molecule.atoms.map{a->
             val y1=a.y*cos(rx)-a.z*sin(rx);val z1=a.y*sin(rx)+a.z*cos(rx)
@@ -72,7 +127,7 @@ class MoleculeView(context:android.content.Context,var molecule:Molecule):View(c
         }
         textPaint.textSize=24f;textPaint.color=Color.LTGRAY;c.drawText("${molecule.name}  ${molecule.formula}",cx,height-28f,textPaint);textPaint.color=Color.WHITE
     }
-    override fun onTouchEvent(e:android.view.MotionEvent):Boolean{
+    override fun onTouchEvent(e:MotionEvent):Boolean{
         when(e.actionMasked){
             MotionEvent.ACTION_DOWN->{lastX=e.x;lastY=e.y;return true}
             MotionEvent.ACTION_POINTER_DOWN->{if(e.pointerCount>=2)oldDist=distance(e);return true}
