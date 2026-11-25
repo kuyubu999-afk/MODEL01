@@ -31,7 +31,7 @@ class MainActivity:Activity(){
         root.addView(spinner)
         viewer=MoleculeView(this,samples[0])
         root.addView(viewer,LinearLayout.LayoutParams(-1,0,1f))
-        val info=TextView(this).apply{text="拖动旋转 · 双指缩放";textSize=13f;setTextColor(Color.LTGRAY);gravity=Gravity.CENTER;paddingBottom=8}
+        val info=TextView(this).apply{text="拖动旋转 · 双指缩放";textSize=13f;setTextColor(Color.LTGRAY);gravity=Gravity.CENTER;setPadding(0,0,0,8)}
         root.addView(info)
         val row=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER}
         fun button(label:String,action:()->Unit){row.addView(Button(this).apply{text=label;setOnClickListener{action()}},LinearLayout.LayoutParams(0,52,1f))}
