@@ -5,7 +5,7 @@ plugins {
 android {
     namespace = "com.model01.molecule"
     compileSdk = 35
-    defaultConfig {
+    compileOptions {\n        sourceCompatibility = JavaVersion.VERSION_17\n        targetCompatibility = JavaVersion.VERSION_17\n    }\n    kotlinOptions {\n        jvmTarget = "17"\n    }\n    defaultConfig {
         applicationId = "com.model01.molecule"
         minSdk = 23
         targetSdk = 35
