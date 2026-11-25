@@ -9,6 +9,7 @@ import kotlin.math.*
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import org.json.JSONObject
 
 data class Atom(val element:String,val x:Float,val y:Float,val z:Float)
 data class Bond(val a:Int,val b:Int)
@@ -64,10 +65,9 @@ class MainActivity:Activity(){
             setPadding(12,0,12,0);background=rounded(panel)
         }
         inputRow.addView(input,LinearLayout.LayoutParams(0,69,1f))
-        val search=Button(this).apply{
-            text="生成模型";textSize=14f;setTextColor(Color.WHITE)
-            background=rounded(accent);isAllCaps=false
-            setOnClickListener{loadInput()}
+        val search=TextView(this).apply{
+            text="查询模型";textSize=15f;setTextColor(Color.WHITE);gravity=Gravity.CENTER
+            background=rounded(accent);setOnClickListener{loadInput()}
         }
         inputRow.addView(search,LinearLayout.LayoutParams(112,69).apply{leftMargin=8})
         root.addView(inputRow,LinearLayout.LayoutParams(-1,-2))
@@ -93,7 +93,7 @@ class MainActivity:Activity(){
         }
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinner.adapter=adapter
-        root.addView(spinner,LinearLayout.LayoutParams(-1,48))
+        root.addView(spinner,LinearLayout.LayoutParams(-1,60))
 
         viewer=MoleculeView(this,samples[0])
         root.addView(viewer,LinearLayout.LayoutParams(-1,0,1f))
@@ -108,9 +108,9 @@ class MainActivity:Activity(){
             orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER
         }
         fun button(label:String,action:()->Unit){
-            val b=Button(this).apply{
-                text=label;setTextSize(11f);setTextColor(Color.WHITE)
-                isAllCaps=false;background=rounded(panel);setOnClickListener{action()}
+            val b=TextView(this).apply{
+                text=label;textSize=12f;setTextColor(Color.WHITE);gravity=Gravity.CENTER
+                background=rounded(panel);setOnClickListener{action()}
             }
             row.addView(b,LinearLayout.LayoutParams(0,46,1f).apply{setMargins(2,0,2,0)})
         }
@@ -138,24 +138,29 @@ class MainActivity:Activity(){
         val normalized=query.replace("₂","2").replace("₃","3").replace("₄","4").replace("₅","5").replace("₆","6").replace("₇","7").replace("₈","8").replace("₉","9").replace("₀","0").replace(" ","")
         val found=samples.firstOrNull{it.name.equals(query,true)||it.formula.replace("₂","2").replace("₃","3").replace("₄","4").replace("₆","6").equals(normalized,true)}
         if(found!=null){viewer.molecule=found;info.text="已载入：${found.name}（内置模型）";viewer.reset();viewer.invalidate();return}
-        info.text="正在查询 PubChem 化合物数据库…"
+        val isFormula=Regex("(?:[A-Z][a-z]?[0-9]*)+").matches(normalized)
+        info.text="正在数据库检索并解析化学结构…"
         Thread {
             try {
-                val encoded=URLEncoder.encode(query,"UTF-8").replace("+","%20")
+                val encoded=URLEncoder.encode(if(isFormula) normalized else query,"UTF-8").replace("+","%20")
+                val searchType=if(isFormula)"fastformula" else "name"
+                val cidsJson=downloadText("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/$searchType/$encoded/cids/JSON")
+                val cid=JSONObject(cidsJson).getJSONObject("IdentifierList").getJSONArray("CID").getInt(0)
+                val sdfUrl="https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/$cid/record/SDF"
                 val (sdf,dimension)=try {
-                    downloadText("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/$encoded/record/SDF?record_type=3d") to "3D"
+                    downloadText("$sdfUrl?record_type=3d") to "三维结构"
                 } catch (_:Exception) {
-                    downloadText("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/$encoded/record/SDF?record_type=2d") to "2D平面结构"
+                    downloadText("$sdfUrl?record_type=2d") to "二维结构"
                 }
                 val molecule=parseSdf(sdf,query)
                 runOnUiThread {
                     viewer.molecule=molecule
-                    info.text="已载入 PubChem 结构：${molecule.name} · $dimension"
+                    info.text="已载入数据库结构 · CID $cid · $dimension（分子式检索可能有多个异构体，当前显示首个匹配项）"
                     viewer.reset();viewer.invalidate()
                 }
-            } catch (_:Exception) {
+            } catch (e:Exception) {
                 runOnUiThread {
-                    info.text="数据库未返回可用的3D结构。可换英文名/分子式；不会用虚构排列冒充真实结构。"
+                    info.text="查询失败：数据库没有匹配结果或暂时无法连接。可尝试英文名称、准确分子式，或稍后重试。"
                 }
             }
         }.start()
