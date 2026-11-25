@@ -34,7 +34,7 @@ class MainActivity:Activity(){
         val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setBackgroundColor(Color.rgb(13,22,39));setPadding(12,8,12,8)}
         val title=TextView(this).apply{text="MODEL01 · 三维分子模型";textSize=21f;setTextColor(Color.WHITE);gravity=Gravity.CENTER;setPadding(0,8,0,8)}
         root.addView(title)
-        input=EditText(this).apply{hint="输入化合物名称或分子式，如：水、乙醇、C6H6";setHintTextColor(Color.LTGRAY);setTextColor(Color.WHITE);textSize=16f;singleLine=true;setPadding(12,4,12,4)}
+        input=EditText(this).apply{hint="输入化合物名称或分子式，如：水、乙醇、C6H6";setHintTextColor(Color.LTGRAY);setTextColor(Color.WHITE);textSize=16f;setSingleLine(true);setPadding(12,4,12,4)}
         root.addView(input,LinearLayout.LayoutParams(-1,52))
         val search=Button(this).apply{text="生成 / 查询分子模型";setOnClickListener{loadInput()}}
         root.addView(search,LinearLayout.LayoutParams(-1,48))
